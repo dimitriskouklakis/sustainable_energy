@@ -1,0 +1,197 @@
+import pandas as pd
+import numpy as np
+import seaborn as sb
+from sqlalchemy import create_engine
+import matplotlib.pyplot as plt
+import pandasql as ps
+import time
+
+#pip install matplotlib seaborn scipy
+#pip install qgrid | 
+#pip install pandas pandasql / This is to perform sql queries [select ... from df]
+
+#============================================================================================
+
+#***STAGE 1 START***
+#At this stage the dataset is written to a pandas dataframe
+
+def main():
+
+    # Fetch Specific Columns
+    columns= ['year', 'country', 'iso_code', 'population', 'gdp', 'electricity_demand']#, 'Production (GWh)',  'Energy Consumption', 'CO2 Emissions']
+
+    # Read our dataset to pandas frame
+    df = pd.read_csv(r"C:\Users\dkouklakis\Desktop\Projects\Energy\owid-energy-data.csv.csv", usecols=columns)
+
+#***STAGE 1 END***
+#==========================================================================================================
+
+#***STAGE 2 START***
+    #Data Cleaning & Manipulation, as indicated in STAGE 4*
+
+    #-->Population converted millions
+    df['population']=round( df['population'] / 1000000, 2)
+    df.rename(columns={'population': 'population_mil'}, inplace=True)
+
+    #-->GDP converted to billions
+    df['gdp']=round( df['gdp'] / 1000000000, 4)
+    df.rename(columns={'gdp': 'gdp_bil'}, inplace=True)
+
+    #-->iso_code converted to string
+    df['iso_code'] = df['iso_code'].astype(str)
+
+    #-->year converted to numeric
+    df['year'] = pd.to_numeric(df['year'], errors='coerce')
+
+#***STAGE 2 START***
+#==========================================================================================================
+
+#***STAGE 3 START***
+    # Dataset Filters
+    
+    # Filters
+    #filtered_countries= ['Greece', 'Turkey', 'United States']
+
+    # Apply Filters to DataFrame
+    df = df[(df['year'] >= 1990)] #& (df['country'].isin(filtered_countries)) 
+
+#***STAGE 3 END***
+#==========================================================================================================
+
+#***STAGE 4 START***
+# *DATA QUALITY CHECKS PIPELINE*
+
+    # PHASE 1: Make the column headers lower, replacing spaces with underscores
+    def phase_1_headers(df):
+        print("⏩ Phase 1: Headers Normalization Has Commenced...")
+        df.columns = df.columns.str.lower().str.replace(' ', '_')
+        print("✅ Passed Phase 1, Ready to Commence Phase 2!")
+        return True
+
+    # PHASE 2: Check for Duplicates
+    def phase_2_check_duplicates(df):
+        print("⏩ Phase 2: Check for Duplicate Rows Has Commenced...")
+        duplicate_rows = df[df.duplicated()]
+        
+        if duplicate_rows.empty:
+            print("✅ Passed Phase 2, Ready to Commence Phase 3!")
+            return True
+        else:
+            print(f"❌ Oops! - Duplicates Found in the following rows:\n{duplicate_rows}!!!")
+            return False
+
+    # PHASE 3: Check Data Consistency
+    def phase_3_check_data_consistency(df):
+        print("⏩ Phase 3: Check for Data Consistency Has Commenced...")
+        inconsistent_columns = {}
+        
+        for column in df.columns:
+            data_types = df[column].map(type).unique()
+            
+            if len(data_types) > 1:
+                inconsistent_columns[column] = data_types
+        
+        if not inconsistent_columns:
+            print("✅ Passed Phase 3. Ready to Commence Phase 4!")
+            print("===========-->Data Types Overview<--===========")
+            for column in df.columns:
+                print(f" • Column '{column}' has data type: {df[column].dtype}")
+            return True
+        else:
+            print("❌ Oops - Data Inconsistencies Found in the following columns:")
+            for column, types in inconsistent_columns.items():
+                print(f" • Column '{column}' has multiple data types: {types}!!!")
+            return False
+        
+    # PHASE 4: Handle Empty Values and Values with Spaces
+    def phase_4_handle_empty_values(df):
+        print("⏩ Phase 4: Handle Empty Values and Values with Spaces Has Commenced...")
+        # Replace empty strings and strings with only spaces with NaN
+        df.replace(r'^\s*$', pd.NA, regex=True, inplace=True)
+        if df.isnull().values.any():
+            print("✅ Passed Phase 4. Empty Values Have Been Converted to Nulls!")
+        else:
+            print("✅ Passed Phase 4. No Empty Values Were Found!")
+        return True
+    
+    # Start time to calculate time needed
+    start = time.time()
+
+    # All Phases Combined
+    def run_pipeline(df):
+        if phase_1_headers(df) and phase_2_check_duplicates(df) and phase_3_check_data_consistency(df) and phase_4_handle_empty_values(df):
+            return True
+        else:
+            return False
+
+    if run_pipeline(df):
+        print("⚡The Dataset Has Passed the Data Quality Checks Pipeline Successfully!✅ Total seconds: ", round(time.time() - start, 2))
+    else:
+        print(" ⚠️ The Dataset Did Not Pass All Data Quality Checks.")
+
+    # Print Output Dataset
+    # print(df.head())
+
+#***STAGE 4 END***
+
+#==========================================================================================================
+
+#***STAGE 5 START***
+
+    # *EDA Stage*
+    # Basic Descriptive Statistics
+    # print(df.describe())
+
+    # Visualize Data Distributions
+    # --> Histogram
+    # df.hist(bins=30, figsize=(10, 8))
+    # plt.suptitle('Histograms of Features')
+    # plt.show()
+
+    # --> Box plot
+    # plt.figure(figsize=(10, 8))
+    # sb.boxplot(data=df)
+    # plt.title('Box Plot of Features')
+    # plt.xticks(rotation=90)
+    # plt.show()
+
+    # Identify patterns and correlations
+    # Pair plot
+    # sb.pairplot(df)
+    # plt.suptitle('Pair Plot of Features', y=1.02)
+    # plt.show()
+
+    # Heatmap of correlations
+    # plt.figure(figsize=(10, 8))
+    # correlation_matrix = df.corr()
+    # sb.heatmap(correlation_matrix, annot=True, cmap='coolwarm')
+    # plt.title('Heatmap of Feature Correlations')
+    # plt.show()
+
+#***STAGE 5 END***
+#==========================================================================================================
+
+
+if __name__ == "__main__":
+    main()
+
+
+#========================================================================================
+
+    #***SQL for Data Quality Checks***
+    # Define SQL query as a string
+    # query = """
+    #     SELECT *
+    #     FROM df
+    #     --WHERE country = 'United States' and year>=2020
+    #     --LIMIT 100
+    #         """
+
+    # Execute the query
+    # result = ps.sqldf(query, locals())
+
+    # Display the result
+    # print(result)
+
+#========================================================================================
+
