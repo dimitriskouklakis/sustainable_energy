@@ -21,7 +21,7 @@ def main():
     columns= ['year', 'country', 'iso_code', 'population', 'gdp', 'electricity_demand']#, 'Production (GWh)',  'Energy Consumption', 'CO2 Emissions']
 
     # Read our dataset to pandas frame
-    df = pd.read_csv(r"C:\Users\dkouklakis\Desktop\Projects\Energy\owid-energy-data.csv.csv", usecols=columns)
+    df = pd.read_csv(r"C:\Users\XXXXXenergy-data.csv.csv", usecols=columns)
 
 #***STAGE 1 END***
 #==========================================================================================================
